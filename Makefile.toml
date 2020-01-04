@@ -1,0 +1,77 @@
+# Install rust-src
+# This will automatically run as a dependency of build-elf
+[tasks.install-rust-src]
+[tasks.install-rust-src.install_crate]
+rustup_component_name = "rust-src"
+
+# Install cargo-xbuild
+# This will automatically run as a dependency of build-elf
+[tasks.install-cargo-xbuild]
+[tasks.install-cargo-xbuild.install_crate]
+crate_name = "cargo-xbuild"
+binary = "cargo"
+test_arg = [
+	"xbuild",
+	"--version"
+]
+
+# Create target directory
+# This will automatically run as a dependency of build-crt0
+[tasks.prebuild]
+command = "mkdir"
+args = [
+	"-p",
+	"target"
+]
+
+# Build a CRT0
+# This will automatically run as a dependency of build-elf
+[tasks.build-crt0]
+dependencies = ["prebuild"]
+command = "arm-none-eabi-as"
+args = [
+	"-o",
+	"target/crt0.o",
+	"objects/crt0.s"
+]
+
+# Build a debug ELF
+# This will automatically run as a dependency of build-rom
+[tasks.build-elf]
+dependencies = [
+	"install-rust-src",
+	"install-cargo-xbuild",
+	"build-crt0"
+]
+command = "cargo"
+args = [
+	"xbuild",
+	"--target",
+	"targets/thumbv4-none-agb.json"
+	]
+
+# Build a debug ROM
+# This will run automatically run as a dependency of run
+[tasks.build-rom]
+dependencies = ["build-elf"]
+command = "arm-none-eabi-objcopy"
+args = [
+	"-O",
+	"binary",
+	"target/thumbv4-none-agb/debug/${CARGO_MAKE_CRATE_NAME}",
+	"target/thumbv4-none-agb/debug/${CARGO_MAKE_CRATE_NAME}.gba"
+]
+
+# Build and run a debug ROM
+[tasks.run]
+dependencies = ["build-rom"]
+command = "mgba"
+args = ["target/thumbv4-none-agb/debug/${CARGO_MAKE_CRATE_NAME}.gba"]
+
+# Delete target directory
+[tasks.clean]
+command = "rm"
+args = [
+	"-rf",
+	"target"
+]
